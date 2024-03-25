@@ -1420,14 +1420,29 @@ static void Task_ReturnToItemListAfterItemPurchase(u8 taskId)
 
     if (JOY_NEW(A_BUTTON | B_BUTTON))
     {
+        // credit to pokeemerald-expansion
+        u16 premierBallsToAdd = tItemCount / 10;
+        if (premierBallsToAdd >= 1 && ItemId_GetPocket(sShopData->currentItemId) == POCKET_POKE_BALLS)
+        {
+            u32 spaceAvailable = GetFreeSpaceForItemInBag(ITEM_PREMIER_BALL);
+            if (spaceAvailable < premierBallsToAdd)
+                premierBallsToAdd = spaceAvailable;
+        }
+        else
+        {
+            premierBallsToAdd = 0;
+        }
+
         if (gTasks[taskId].data[0] != 20)
             PlaySE(SE_SELECT);
 
-        // Purchasing 10+ Poke Balls gets the player a Premier Ball
-        if (sShopData->currentItemId == ITEM_POKE_BALL && tItemCount >= 10 && AddBagItem(ITEM_PREMIER_BALL, 1) == TRUE)
+        AddBagItem(ITEM_PREMIER_BALL, premierBallsToAdd);
+        if (premierBallsToAdd > 0)
         {
             FillWindowPixelBuffer(WIN_ITEM_DESCRIPTION, PIXEL_FILL(0));
-            BuyMenuPrint(WIN_ITEM_DESCRIPTION, gText_ThrowInPremierBall, 4, 0, TEXT_SKIP_DRAW, COLORID_BLACK, TRUE);
+            ConvertIntToDecimalStringN(gStringVar1, premierBallsToAdd, STR_CONV_MODE_LEFT_ALIGN, MAX_ITEM_DIGITS);
+            StringExpandPlaceholders(gStringVar2, (premierBallsToAdd >= 2 ? gText_ThrowInPremierBalls : gText_ThrowInPremierBall));
+            BuyMenuPrint(WIN_ITEM_DESCRIPTION, gStringVar2, 4, 0, TEXT_SKIP_DRAW, COLORID_BLACK, TRUE);
         }
         gTasks[taskId].data[0] = 20;
         gTasks[taskId].func = Task_ReturnToItemListWaitMsg;
