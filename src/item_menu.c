@@ -586,11 +586,11 @@ void ChooseBerryForMachine(void (*exitCallback)(void))
 
 void CB2_GoToSellMenu(void)
 {
-    #if (USE_NEW_SHOP_CONFIG == TRUE)
+    #ifdef MUDSKIP_SHOP_UI
     GoToBagMenu(ITEMMENULOCATION_SHOP, POCKETS_COUNT, CB2_ExitSellNewShopMenu);
     #else
     GoToBagMenu(ITEMMENULOCATION_SHOP, POCKETS_COUNT, CB2_ExitSellMenu);
-    #endif // USE_NEW_SHOP_CONFIG
+    #endif // MUDSKIP_SHOP_UI
 }
 
 void CB2_GoToItemDepositMenu(void)

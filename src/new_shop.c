@@ -1,4 +1,4 @@
-#if (USE_NEW_SHOP_CONFIG == TRUE)
+#ifdef MUDSKIP_SHOP_UI
 
 #include "global.h"
 #include "bg.h"
@@ -1579,4 +1579,4 @@ void NewShop_CreateDecorationShop2Menu(const u16 *itemsForSale)
     SetShopMenuCallback(ScriptContext_Enable);
 }
 
-#endif // USE_NEW_SHOP_CONFIG
+#endif // MUDSKIP_SHOP_UI

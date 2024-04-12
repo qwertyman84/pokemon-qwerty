@@ -55,8 +55,8 @@
 #endif
 #endif
 
-// Config to toggle using the new shop menu.
-// Set this to either TRUE or FALSE.
-#define USE_NEW_SHOP_CONFIG TRUE
+// Id for branches e.g. outfit
+// also used as a toggle to use this menu permanently
+#define MUDSKIP_SHOP_UI
 
 #endif // GUARD_CONFIG_H
