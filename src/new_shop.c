@@ -1,5 +1,3 @@
-#ifdef MUDSKIP_SHOP_UI
-
 #include "global.h"
 #include "bg.h"
 #include "data.h"
@@ -29,7 +27,6 @@
 #include "scanline_effect.h"
 #include "script.h"
 #include "shop.h"
-#include "new_shop.h"
 #include "sound.h"
 #include "sprite.h"
 #include "string_util.h"
@@ -44,6 +41,12 @@
 #include "constants/rgb.h"
 #include "constants/songs.h"
 #include "constants/event_objects.h"
+
+#ifdef MUDSKIP_SHOP_UI
+#ifdef MUDSKIP_OUTFIT_SYSTEM
+#include "outfit_menu.h"
+#endif // MUDSKIP_OUTFIT_SYSTEM
+#include "new_shop.h"
 
 #define TAG_SCROLL_ARROW   2100
 #define TAG_ITEM_ICON_BASE 2110
@@ -80,6 +83,9 @@ enum {
     MART_TYPE_NORMAL,
     MART_TYPE_DECOR,
     MART_TYPE_DECOR2,
+    #ifdef MUDSKIP_OUTFIT_SYSTEM
+    MART_TYPE_OUTFIT,
+    #endif // MUDSKIP_OUTFIT_SYSTEM
 };
 
 // mugshot id
@@ -195,6 +201,9 @@ static void Task_BuyHowManyDialogueHandleInput(u8 taskId);
 static void BuyMenuSubtractMoney(u8 taskId);
 static void RecordItemPurchase(u8 taskId);
 static void Task_ReturnToItemListAfterItemPurchase(u8 taskId);
+#ifdef MUDSKIP_OUTFIT_SYSTEM
+static void Task_ReturnToItemListAfterOutfitPurchase(u8 taskId);
+#endif // MUDSKIP_OUTFIT_SYSTEM
 static void Task_ReturnToItemListAfterDecorationPurchase(u8 taskId);
 static void Task_HandleShopMenuBuy(u8 taskId);
 static void Task_HandleShopMenuSell(u8 taskId);
@@ -803,6 +812,24 @@ static void ForEachCB_PopulateItemIcons(u32 idx, u32 col, u32 row)
         gSprites[sShopData->gridItems->iconSpriteIds[idx]].x = ((col % 3) < ARRAY_COUNT(sGridPosX)) ? sGridPosX[col] : sGridPosX[0];
         gSprites[sShopData->gridItems->iconSpriteIds[idx]].y = ((row % 2) < ARRAY_COUNT(sGridPosY)) ? sGridPosY[row] : sGridPosY[0];
     }
+    #ifdef MUDSKIP_OUTFIT_SYSTEM
+    else if (sMartInfo.martType == MART_TYPE_OUTFIT)
+    {
+        //! TODO: Fix coord of this
+        u32 x, y;
+        u16 gfxId = GetPlayerAvatarGraphicsIdByOutfitStateIdAndGender(sMartInfo.itemList[i], PLAYER_AVATAR_STATE_NORMAL, gSaveBlock2Ptr->playerGender);
+
+        x = (((col % 3) < ARRAY_COUNT(sGridPosX)) ? sGridPosX[col] : sGridPosX[0]) - 40;
+        y = (((row % 2) < ARRAY_COUNT(sGridPosY)) ? sGridPosY[row] : sGridPosY[0]) - 36;
+        if (sMartInfo.itemList[i] == OUTFIT_NONE) // is 0 as DECOR/ITEM_NONE
+            sShopData->gridItems->iconSpriteIds[idx] = AddItemIconSprite(GFXTAG_ITEM + idx, PALTAG_ITEM + idx, ITEM_LIST_END);
+        else
+            sShopData->gridItems->iconSpriteIds[idx] = CreateObjectGraphicsSprite(gfxId, SpriteCallbackDummy, x, y, 0);
+
+        gSprites[sShopData->gridItems->iconSpriteIds[idx]].x = ((col % 3) < ARRAY_COUNT(sGridPosX)) ? sGridPosX[col] : sGridPosX[0];
+        gSprites[sShopData->gridItems->iconSpriteIds[idx]].y = ((row % 2) < ARRAY_COUNT(sGridPosY)) ? sGridPosY[row] : sGridPosY[0];
+    }
+    #endif // MUDSKIP_OUTFIT_SYSTEM
     else
     {
         u32 x, y;
@@ -932,6 +959,10 @@ static inline const u8 *BuyMenuGetItemName(u32 id)
 {
     if (sMartInfo.martType == MART_TYPE_NORMAL)
         return ItemId_GetName(sMartInfo.itemList[id]);
+    #ifdef MUDSKIP_OUTFIT_SYSTEM
+    else if (sMartInfo.martType == MART_TYPE_OUTFIT)
+        return gOutfits[sMartInfo.itemList[id]].name;
+    #endif // MUDSKIP_OUTFIT_SYSTEM
     else
         return gDecorations[sMartInfo.itemList[id]].name;
 }
@@ -940,6 +971,10 @@ static inline const u8 *BuyMenuGetItemDesc(u32 id)
 {
     if (sMartInfo.martType == MART_TYPE_NORMAL)
         return ItemId_GetDescription(sMartInfo.itemList[id]);
+    #ifdef MUDSKIP_OUTFIT_SYSTEM
+    else if (sMartInfo.martType == MART_TYPE_OUTFIT)
+        return gOutfits[sMartInfo.itemList[id]].desc;
+    #endif // MUDSKIP_OUTFIT_SYSTEM
     else
         return gDecorations[sMartInfo.itemList[id]].description;
 }
@@ -948,6 +983,10 @@ static inline u32 BuyMenuGetItemPrice(u32 id)
 {
     if (sMartInfo.martType == MART_TYPE_NORMAL)
         return ItemId_GetPrice(sMartInfo.itemList[id]);
+    #ifdef MUDSKIP_OUTFIT_SYSTEM
+    else if (sMartInfo.martType == MART_TYPE_OUTFIT)
+        return GetOutfitPrice(sMartInfo.itemList[id]);
+    #endif // MUDSKIP_OUTFIT_SYSTEM
     else
         return gDecorations[sMartInfo.itemList[id]].price;
 }
@@ -1231,10 +1270,11 @@ static void BuyMenuDisplayMessage(u8 taskId, const u8 *str, TaskFunc nextFunc)
 static void Task_BuyMenuTryBuyingItem(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
+    u32 cost = BuyMenuGetItemPrice(GridMenu_SelectedIndex(sShopData->gridItems));
     if (sMartInfo.martType == MART_TYPE_NORMAL)
-        sShopData->totalCost = (ItemId_GetPrice(sShopData->currentItemId) >> IsPokeNewsActive(POKENEWS_SLATEPORT));
+        sShopData->totalCost = (cost >> IsPokeNewsActive(POKENEWS_SLATEPORT));
     else
-        sShopData->totalCost = gDecorations[sShopData->currentItemId].price;
+        sShopData->totalCost = cost;
 
     FillWindowPixelBuffer(WIN_ITEM_DESCRIPTION, PIXEL_FILL(0));
 
@@ -1277,6 +1317,15 @@ static void Task_BuyMenuTryBuyingItem(u8 taskId)
                 BuyMenuDisplayMessage(taskId, sText_Var1CertainlyHowMany, Task_BuyHowManyDialogueInit);
             }
         }
+        #ifdef MUDSKIP_OUTFIT_SYSTEM
+        else if (sMartInfo.martType == MART_TYPE_OUTFIT)
+        {
+            BufferOutfitStrings(gStringVar1, sShopData->currentItemId, OUTFIT_BUFFER_NAME);
+            ConvertIntToDecimalStringN(gStringVar2, sShopData->totalCost, STR_CONV_MODE_LEFT_ALIGN, 6);
+            StringExpandPlaceholders(gStringVar4, gText_YouWantedVar1OutfitThatllBeVar2);
+            BuyMenuDisplayMessage(taskId, gStringVar4, BuyMenuConfirmPurchase);
+        }
+        #endif // MUDSKIP_OUTFIT_SYSTEM
         else
         {
             const u8 *str;
@@ -1405,6 +1454,13 @@ static void BuyMenuTryMakePurchase(u8 taskId)
             BuyMenuDisplayMessage(taskId, sText_NoMoreRoomForThis, Task_ReturnToItemListWaitMsg);
         }
     }
+    #ifdef MUDSKIP_OUTFIT_SYSTEM
+    else if (sMartInfo.martType == MART_TYPE_OUTFIT)
+    {
+        UnlockOutfit(sShopData->currentItemId);
+        BuyMenuDisplayMessage(taskId, gText_HereIsTheOutfitThankYou, BuyMenuSubtractMoney);
+    }
+    #endif // MUDSKIP_OUTFIT_SYSTEM
     else
     {
         if (DecorationAdd(sShopData->currentItemId))
@@ -1432,6 +1488,10 @@ static void BuyMenuSubtractMoney(u8 taskId)
 
     if (sMartInfo.martType == MART_TYPE_NORMAL)
         gTasks[taskId].func = Task_ReturnToItemListAfterItemPurchase;
+    #ifdef MUDSKIP_OUTFIT_SYSTEM
+    else if (sMartInfo.martType == MART_TYPE_OUTFIT)
+        gTasks[taskId].func = Task_ReturnToItemListAfterOutfitPurchase;
+    #endif // MUDSKIP_OUTFIT_SYSTEM
     else
         gTasks[taskId].func = Task_ReturnToItemListAfterDecorationPurchase;
 }
@@ -1482,6 +1542,17 @@ static void Task_ReturnToItemListAfterItemPurchase(u8 taskId)
         gTasks[taskId].func = Task_ReturnToItemListWaitMsg;
     }
 }
+
+#ifdef MUDSKIP_OUTFIT_SYSTEM
+static void Task_ReturnToItemListAfterOutfitPurchase(u8 taskId)
+{
+    if (JOY_NEW(A_BUTTON | B_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        BuyMenuReturnToItemList(taskId);
+    }
+}
+#endif // MUDSKIP_OUTFIT_SYSTEM
 
 static void Task_ReturnToItemListAfterDecorationPurchase(u8 taskId)
 {
@@ -1578,5 +1649,14 @@ void NewShop_CreateDecorationShop2Menu(const u16 *itemsForSale)
     SetShopItemsForSale(itemsForSale);
     SetShopMenuCallback(ScriptContext_Enable);
 }
+
+#ifdef MUDSKIP_OUTFIT_SYSTEM
+void NewShop_CreateOutfitShopMenu(const u16 *itemsForSale)
+{
+    CreateNewShopMenu(MART_TYPE_OUTFIT);
+    SetShopItemsForSale(itemsForSale);
+    SetShopMenuCallback(ScriptContext_Enable);
+}
+#endif // MUDSKIP_OUTFIT_SYSTEM
 
 #endif // MUDSKIP_SHOP_UI
