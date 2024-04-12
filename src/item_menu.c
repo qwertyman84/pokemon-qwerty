@@ -38,6 +38,7 @@
 #include "scanline_effect.h"
 #include "script.h"
 #include "shop.h"
+#include "new_shop.h"
 #include "sound.h"
 #include "sprite.h"
 #include "strings.h"
@@ -585,7 +586,11 @@ void ChooseBerryForMachine(void (*exitCallback)(void))
 
 void CB2_GoToSellMenu(void)
 {
+    #if (USE_NEW_SHOP_CONFIG == TRUE)
+    GoToBagMenu(ITEMMENULOCATION_SHOP, POCKETS_COUNT, CB2_ExitSellNewShopMenu);
+    #else
     GoToBagMenu(ITEMMENULOCATION_SHOP, POCKETS_COUNT, CB2_ExitSellMenu);
+    #endif // USE_NEW_SHOP_CONFIG
 }
 
 void CB2_GoToItemDepositMenu(void)

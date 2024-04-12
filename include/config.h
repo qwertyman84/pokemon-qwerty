@@ -55,4 +55,8 @@
 #endif
 #endif
 
+// Config to toggle using the new shop menu.
+// Set this to either TRUE or FALSE.
+#define USE_NEW_SHOP_CONFIG TRUE
+
 #endif // GUARD_CONFIG_H
