@@ -43,9 +43,8 @@
 #include "constants/event_objects.h"
 
 #ifdef MUDSKIP_SHOP_UI
-#ifdef MUDSKIP_OUTFIT_SYSTEM
-#include "outfit_menu.h"
-#endif // MUDSKIP_OUTFIT_SYSTEM
+
+//#include "outfit_menu.h" // Uncomment if you have mudskip's outfit system
 #include "new_shop.h"
 
 #define TAG_SCROLL_ARROW   2100
@@ -354,7 +353,7 @@ static const struct WindowTemplate sShopBuyMenuWindowTemplates[] =
         .tilemapLeft = 22,
         .tilemapTop = 14,
         .width = 8,
-        .height = 2,
+        .height = 6,
         .paletteNum = 15,
         .baseBlock = 0x018E,
     },
@@ -1574,10 +1573,10 @@ static void BuyMenuPrintItemQuantityAndPrice(u8 taskId)
     s16 *data = gTasks[taskId].data;
 
     FillWindowPixelBuffer(WIN_QUANTITY_PRICE, PIXEL_FILL(0));
-    PrintMoneyLocal(WIN_QUANTITY_PRICE, 0, sShopData->totalCost, 67, COLORID_BLACK, FALSE);
+    PrintMoneyLocal(WIN_QUANTITY_PRICE, 13, sShopData->totalCost, 51, COLORID_BLACK, FALSE);
     ConvertIntToDecimalStringN(gStringVar1, tItemCount, STR_CONV_MODE_LEADING_ZEROS, BAG_ITEM_CAPACITY_DIGITS);
     StringExpandPlaceholders(gStringVar4, gText_xVar1);
-    BuyMenuPrint(WIN_QUANTITY_PRICE, gStringVar4, 0, 1, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
+    BuyMenuPrint(WIN_QUANTITY_PRICE, gStringVar4, 29, 3, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
     CopyWindowToVram(WIN_QUANTITY_PRICE, COPYWIN_FULL);
 }
 
