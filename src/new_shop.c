@@ -164,11 +164,11 @@ const u32 sNewShopMenu_ScrollTilemap[] = INCBIN_U32("graphics/new_shop/scroll.bi
 const u32 sNewShopMenuMoney_Gfx[] = INCBIN_U32("graphics/new_shop/money.4bpp.lz");
 const u16 sNewShopMenu_CursorGfx[] = INCBIN_U16("graphics/new_shop/cursor.4bpp"); // uses the menu palette
 
-const u8 sNewShopMenuSellerMugshotGfx_Jerry[] = INCBIN_U8("graphics/new_shop/mugshots/jerry.4bpp");
-const u16 sNewShopMenuSellerMugshotPal_Jerry[] = INCBIN_U16("graphics/new_shop/mugshots/jerry.gbapal");
+const u8 sNewShopMenuSellerMugshotGfx_Jerry[] = INCBIN_U8("graphics/new_shop/sellers/jerry/mugshot.4bpp");
+const u16 sNewShopMenuSellerMugshotPal_Jerry[] = INCBIN_U16("graphics/new_shop/sellers/jerry/mugshot.gbapal");
 
-const u8 sNewShopMenuSellerMugshotGfx_Jennie[] = INCBIN_U8("graphics/new_shop/mugshots/jennie.4bpp");
-const u16 sNewShopMenuSellerMugshotPal_Jennie[] = INCBIN_U16("graphics/new_shop/mugshots/jennie.gbapal");
+const u8 sNewShopMenuSellerMugshotGfx_Jennie[] = INCBIN_U8("graphics/new_shop/sellers/jennie/mugshot.4bpp");
+const u16 sNewShopMenuSellerMugshotPal_Jennie[] = INCBIN_U16("graphics/new_shop/sellers/jennie/mugshot.gbapal");
 
 static void Task_ShopMenu(u8 taskId);
 static void Task_HandleShopMenuQuit(u8 taskId);
