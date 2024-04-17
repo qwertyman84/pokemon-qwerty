@@ -428,13 +428,18 @@ static const struct SpriteTemplate sCursor_SpriteTemplate = {
     .oam = &sCursor_SpriteOamData,
 };
 
-#define MUGSHOT(num, gfxid, id) \
-    [SELLER_ ## num] = {{.gfxId=OBJ_EVENT_GFX_ ## gfxid}, .gfx=sNewShopMenuSellerMugshotGfx_ ## id, .pal=sNewShopMenuSellerMugshotPal_ ## id}
-
 static const struct Seller sSellers[] = {
     // both are same thing btw, is just one is shortened with macro and others are pure
-    MUGSHOT(JERRY, MART_EMPLOYEE, Jerry),
-    {{.gfxId=OBJ_EVENT_GFX_WOMAN_3}, .gfx=sNewShopMenuSellerMugshotGfx_Jennie, .pal=sNewShopMenuSellerMugshotPal_Jennie},
+    [SELLER_JERRY] = {
+        { .gfxId = OBJ_EVENT_GFX_MART_EMPLOYEE },
+        .gfx = sNewShopMenuSellerMugshotGfx_Jerry,
+        .pal = sNewShopMenuSellerMugshotPal_Jerry,
+    },
+    [SELLER_JENNIE] = {
+        { .gfxId = OBJ_EVENT_GFX_WOMAN_3 },
+        .gfx = sNewShopMenuSellerMugshotGfx_Jennie,
+        .pal = sNewShopMenuSellerMugshotPal_Jennie,
+    },
 };
 
 static u8 CreateNewShopMenu(u8 martType)
