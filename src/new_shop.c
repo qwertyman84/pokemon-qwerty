@@ -83,6 +83,7 @@ enum {
     #ifdef MUDSKIP_OUTFIT_SYSTEM
     MART_TYPE_OUTFIT,
     #endif // MUDSKIP_OUTFIT_SYSTEM
+    MART_TYPE_VARIABLE,
 };
 
 // seller id
@@ -98,7 +99,9 @@ struct MartInfo
 {
     void (*callback)(void);
     const struct MenuAction *menuActions;
-    const u16 *itemList;
+    const u16 *itemSource;
+    u16 *itemList;
+    u16 *itemPriceList;
     u16 itemCount;
     u8 windowId;
     u8 martType;
@@ -452,10 +455,10 @@ static u8 CreateNewShopMenu(u8 martType)
     int numMenuItems;
 
     LockPlayerFieldControls();
-    DebugPrintf("lastTalked: %d", gSpecialVar_LastTalked);
+    MgbaPrintf(MGBA_LOG_WARN, "lastTalked: %d", gSpecialVar_LastTalked);
     sMartInfo.martType = martType;
 
-    if (martType == MART_TYPE_NORMAL)
+    if (martType == MART_TYPE_NORMAL || martType == MART_TYPE_VARIABLE)
     {
         struct WindowTemplate winTemplate = sShopMenuWindowTemplates[WIN_BUY_SELL_QUIT];
         winTemplate.width = GetMaxWidthInMenuTable(sShopMenuActions_BuySellQuit, ARRAY_COUNT(sShopMenuActions_BuySellQuit));
@@ -488,18 +491,88 @@ static void SetShopMenuCallback(void (* callback)(void))
 
 static void SetShopItemsForSale(const u16 *items)
 {
-    u16 i = 0;
+    u32 i = 0;
 
-    sMartInfo.itemList = items;
+    sMartInfo.itemSource = items;
     sMartInfo.itemCount = 0;
 
     // Read items until ITEM_NONE / DECOR_NONE is reached
-    while (sMartInfo.itemList[i])
+    while (items[i])
     {
+        MgbaPrintf(MGBA_LOG_WARN, "SetShopItemsForSale \n"
+                                    "       loop item: %d    loop idx: %d", items[i], i);
         sMartInfo.itemCount++;
         i++;
+
+        if (sMartInfo.martType == MART_TYPE_VARIABLE)
+            i++;
     }
     sMartInfo.itemCount++; // for ITEM_NONE / DECOR_NONE
+    MgbaPrintf(MGBA_LOG_WARN, "SetShopItemsForSale \n"
+                                "       end item: %d    end idx: %d", items[i], i);
+}
+
+static void InitShopItemsForSale(void)
+{
+    u32 i = 0, j = 0;
+    u16 *itemList;
+    u16 *itemPriceList;
+
+    sMartInfo.itemList = AllocZeroed(sMartInfo.itemCount * sizeof(u16));
+    sMartInfo.itemPriceList = AllocZeroed(sMartInfo.itemCount * sizeof(u16));
+
+    itemList = (sMartInfo.itemList);
+    itemPriceList = (sMartInfo.itemPriceList);
+
+    while (sMartInfo.itemSource[i])
+    {
+        *itemList = sMartInfo.itemSource[i];
+        MgbaPrintf(MGBA_LOG_WARN, "InitShopItemsForSale \n"
+                                    "       loop item source: %d    loop item list: %d",
+                                    sMartInfo.itemSource[i], sMartInfo.itemList[j]);
+        i++;
+        itemList++;
+        j++;
+
+        if (sMartInfo.martType == MART_TYPE_VARIABLE)
+        {
+            *itemPriceList = sMartInfo.itemSource[i];
+            MgbaPrintf(MGBA_LOG_WARN, "InitShopItemsForSale \n"
+                                        "       loop price source: %d    loop price list: %d",
+                                        sMartInfo.itemSource[i], sMartInfo.itemPriceList[j]);
+            i++;
+            itemPriceList++;
+        }
+    }
+
+    *itemList = ITEM_NONE;
+    *itemPriceList = ITEM_NONE;
+    MgbaPrintf(MGBA_LOG_WARN, "InitShopItemsForSale \n"
+                                "       end item source: %d    end item list: %d    end price list: %d",
+                                sMartInfo.itemSource[i], sMartInfo.itemList[j], sMartInfo.itemPriceList[j]);
+}
+
+static u32 SearchItemListForPrice(u32 itemId)
+{
+    u32 i;
+    u16 *itemList = sMartInfo.itemList;
+    u16 *itemPriceList = sMartInfo.itemPriceList;
+
+    for (i = 0; i < sMartInfo.itemCount; i++)
+    {
+        MgbaPrintf(MGBA_LOG_WARN, "SearchItemListForPrice \n"
+                                    "       loop item list: %d    loop cost list: %d",
+                                    sMartInfo.itemList[i], sMartInfo.itemPriceList[i]);
+        if (*itemList == itemId)
+        {
+            return *itemPriceList;
+        }
+
+        itemList++;
+        itemPriceList++;
+    }
+
+    return 0;
 }
 
 static void Task_ShopMenu(u8 taskId)
@@ -557,6 +630,8 @@ static void Task_HandleShopMenuQuit(u8 taskId)
 
     if (sMartInfo.callback)
         sMartInfo.callback();
+
+    MgbaPrintf(MGBA_LOG_WARN, "Task_HandleShopMenuQuit");
 }
 
 static void Task_GoToBuyOrSellMenu(u8 taskId)
@@ -632,6 +707,7 @@ static void CB2_InitBuyMenu(void)
         ResetTasks();
         ClearScheduledBgCopiesToVram();
         sShopData = AllocZeroed(sizeof(struct ShopData));
+        InitShopItemsForSale();
         BuyMenuInitBgs();
         BuyMenuInitGrid();
         BuyMenuInitWindows();
@@ -661,6 +737,10 @@ static void BuyMenuFreeMemory(void)
 {
     GridMenu_Destroy(sShopData->gridItems);
     Free(sShopData);
+    // they're better freed here since
+    // this is only used in the buy menu
+    Free(sMartInfo.itemPriceList);
+    Free(sMartInfo.itemList);
     FreeAllWindowBuffers();
 }
 
@@ -670,7 +750,7 @@ static void ForEachCB_PopulateItemIcons(u32 idx, u32 col, u32 row)
     if (i >= sMartInfo.itemCount)
         return;
 
-    if (sMartInfo.martType == MART_TYPE_NORMAL)
+    if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
     {
         if (sMartInfo.itemList[i] == ITEM_NONE)
             sShopData->gridItems->iconSpriteIds[idx] = AddItemIconSprite(GFXTAG_ITEM + idx, PALTAG_ITEM + idx, ITEM_LIST_END);
@@ -844,7 +924,7 @@ static inline void SpawnWindow(u8 winId)
 
 static inline const u8 *BuyMenuGetItemName(u32 id)
 {
-    if (sMartInfo.martType == MART_TYPE_NORMAL)
+    if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
         return ItemId_GetName(sMartInfo.itemList[id]);
     #ifdef MUDSKIP_OUTFIT_SYSTEM
     else if (sMartInfo.martType == MART_TYPE_OUTFIT)
@@ -856,7 +936,7 @@ static inline const u8 *BuyMenuGetItemName(u32 id)
 
 static inline const u8 *BuyMenuGetItemDesc(u32 id)
 {
-    if (sMartInfo.martType == MART_TYPE_NORMAL)
+    if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
         return ItemId_GetDescription(sMartInfo.itemList[id]);
     #ifdef MUDSKIP_OUTFIT_SYSTEM
     else if (sMartInfo.martType == MART_TYPE_OUTFIT)
@@ -870,6 +950,8 @@ static inline u32 BuyMenuGetItemPrice(u32 id)
 {
     if (sMartInfo.martType == MART_TYPE_NORMAL)
         return ItemId_GetPrice(sMartInfo.itemList[id]);
+    else if (sMartInfo.martType == MART_TYPE_VARIABLE)
+        return SearchItemListForPrice(sMartInfo.itemList[id]);
     #ifdef MUDSKIP_OUTFIT_SYSTEM
     else if (sMartInfo.martType == MART_TYPE_OUTFIT)
         return GetOutfitPrice(sMartInfo.itemList[id]);
@@ -989,7 +1071,7 @@ static void BuyMenuInitWindows(void)
     BuyMenuPrint(WIN_MULTI, sText_Price, 0, 2*8, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
     BuyMenuPrint(WIN_MULTI, sText_InBag, 0, 4*8, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
 
-    if (sMartInfo.martType == MART_TYPE_NORMAL)
+    if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
     {
         u32 item = sMartInfo.itemList[0];
         u16 quantity = CountTotalItemQuantityInBag(item);
@@ -1118,7 +1200,7 @@ static void UpdateItemData(void)
         FillWindowPixelRect(WIN_MULTI, PIXEL_FILL(0), 0, 0, 84, 16);
         BuyMenuPrint(WIN_MULTI, sText_ReturnToField, 0, 0, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
         BuyMenuPrint(WIN_MULTI, strip, GetStringRightAlignXOffset(FONT_SMALL, strip, 80), 2*8, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
-        if (sMartInfo.martType == MART_TYPE_NORMAL)
+        if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
             BuyMenuPrint(WIN_MULTI, strip, GetStringRightAlignXOffset(FONT_SMALL, strip, 80), 4*8, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
 
         FillWindowPixelBuffer(WIN_ITEM_DESCRIPTION, PIXEL_FILL(0));
@@ -1131,7 +1213,7 @@ static void UpdateItemData(void)
         const u8 *desc = BuyMenuGetItemDesc(i);
         BuyMenuPrint(WIN_MULTI, BuyMenuGetItemName(i), 0, 0, TEXT_SKIP_DRAW, COLORID_BLACK, FALSE);
 
-        if (sMartInfo.martType == MART_TYPE_NORMAL)
+        if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
         {
             u16 quantity = CountTotalItemQuantityInBag(item);
             if (ItemId_GetPocket(item) == POCKET_TM_HM && item != ITEM_NONE)
@@ -1192,7 +1274,7 @@ static void Task_BuyMenuTryBuyingItem(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
     u32 cost = BuyMenuGetItemPrice(GridMenu_SelectedIndex(sShopData->gridItems));
-    if (sMartInfo.martType == MART_TYPE_NORMAL)
+    if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
         sShopData->totalCost = (cost >> IsPokeNewsActive(POKENEWS_SLATEPORT));
     else
         sShopData->totalCost = cost;
@@ -1219,14 +1301,15 @@ static void Task_BuyMenuTryBuyingItem(u8 taskId)
     else
     {
         PlaySE(SE_SELECT);
-        if (sMartInfo.martType == MART_TYPE_NORMAL)
+        if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
         {
             CopyItemName(sShopData->currentItemId, gStringVar1);
             if (ItemId_GetImportance(sShopData->currentItemId))
             {
+                u32 price = BuyMenuGetItemPrice(GridMenu_SelectedIndex(sShopData->gridItems));
                 ConvertIntToDecimalStringN(gStringVar2, sShopData->totalCost, STR_CONV_MODE_LEFT_ALIGN, 6);
                 tItemCount = 1;
-                sShopData->totalCost = (ItemId_GetPrice(sShopData->currentItemId) >> IsPokeNewsActive(POKENEWS_SLATEPORT)) * tItemCount;
+                sShopData->totalCost = (price >> IsPokeNewsActive(POKENEWS_SLATEPORT)) * tItemCount;
                 BuyMenuDisplayMessage(taskId, sText_YouWantedVar1ThatllBeVar2, BuyMenuConfirmPurchase);
             }
             else if (ItemId_GetPocket(sShopData->currentItemId) == POCKET_TM_HM)
@@ -1274,7 +1357,8 @@ static void Task_BuyMenu(u8 taskId)
     GridMenu_HandleInput(sShopData->gridItems);
     if (JOY_REPEAT(DPAD_ANY))
     {
-        DebugPrintf("idx: %d", GridMenu_SelectedIndex(sShopData->gridItems));
+        MgbaPrintf(MGBA_LOG_WARN, "Chosen item: %d", sMartInfo.itemList[GridMenu_SelectedIndex(sShopData->gridItems)]);
+        MgbaPrintf(MGBA_LOG_WARN, "idx: %d", GridMenu_SelectedIndex(sShopData->gridItems));
     }
     else if (JOY_NEW(B_BUTTON))
     {
@@ -1291,7 +1375,6 @@ static void Task_BuyMenu(u8 taskId)
         {
             gTasks[taskId].func = Task_BuyMenuTryBuyingItem;
         }
-        DebugPrintf("Chosen item: %d", sShopData->currentItemId);
 
     }
     UpdateCursorPosition();
@@ -1323,7 +1406,8 @@ static void Task_BuyHowManyDialogueHandleInput(u8 taskId)
 
     if (AdjustQuantityAccordingToDPadInput(&tItemCount, sShopData->maxQuantity) == TRUE)
     {
-        sShopData->totalCost = (ItemId_GetPrice(sShopData->currentItemId) >> IsPokeNewsActive(POKENEWS_SLATEPORT)) * tItemCount;
+        u32 price = BuyMenuGetItemPrice(GridMenu_SelectedIndex(sShopData->gridItems));
+        sShopData->totalCost = (price >> IsPokeNewsActive(POKENEWS_SLATEPORT)) * tItemCount;
         BuyMenuPrintItemQuantityAndPrice(taskId);
     }
     else
@@ -1362,7 +1446,7 @@ static void BuyMenuTryMakePurchase(u8 taskId)
     s16 *data = gTasks[taskId].data;
 
     FillWindowPixelBuffer(WIN_ITEM_DESCRIPTION, PIXEL_FILL(0));
-    if (sMartInfo.martType == MART_TYPE_NORMAL)
+    if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
     {
         if (AddBagItem(sShopData->currentItemId, tItemCount) == TRUE)
         {
@@ -1407,7 +1491,7 @@ static void BuyMenuSubtractMoney(u8 taskId)
     FillWindowPixelBuffer(WIN_MONEY, PIXEL_FILL(0));
     PrintMoneyLocal(WIN_MONEY, 0, GetMoney(&gSaveBlock1Ptr->money), 84, COLORID_NORMAL, TRUE);
 
-    if (sMartInfo.martType == MART_TYPE_NORMAL)
+    if (sMartInfo.martType == MART_TYPE_NORMAL || sMartInfo.martType == MART_TYPE_VARIABLE)
         gTasks[taskId].func = Task_ReturnToItemListAfterItemPurchase;
     #ifdef MUDSKIP_OUTFIT_SYSTEM
     else if (sMartInfo.martType == MART_TYPE_OUTFIT)
@@ -1578,5 +1662,13 @@ void NewShop_CreateOutfitShopMenu(const u16 *itemsForSale)
     SetShopMenuCallback(ScriptContext_Enable);
 }
 #endif // MUDSKIP_OUTFIT_SYSTEM
+
+void NewShop_CreateVariablePokemartMenu(const u16 *itemsForSale)
+{
+    CreateNewShopMenu(MART_TYPE_VARIABLE);
+    SetShopItemsForSale(itemsForSale);
+    ClearItemPurchases();
+    SetShopMenuCallback(ScriptContext_Enable);
+}
 
 #endif // MUDSKIP_SHOP_UI
