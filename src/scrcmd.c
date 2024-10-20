@@ -41,7 +41,6 @@
 #include "script_movement.h"
 #include "script_pokemon_util.h"
 #include "shop.h"
-#include "new_shop.h"
 #include "slot_machine.h"
 #include "sound.h"
 #include "string_util.h"
@@ -2044,17 +2043,8 @@ bool8 ScrCmd_dowildbattle(struct ScriptContext *ctx)
 bool8 ScrCmd_pokemart(struct ScriptContext *ctx)
 {
     const void *ptr = (void *)ScriptReadWord(ctx);
-    bool16 useVariablePrices = ScriptReadHalfword(ctx);
 
-    if (useVariablePrices)
-    {
-        NewShop_CreateVariablePokemartMenu(ptr);
-    }
-    else
-    {
-        NewShop_CreatePokemartMenu(ptr);
-    }
-
+    CreatePokemartMenu(ptr);
     ScriptContext_Stop();
     return TRUE;
 }
@@ -2063,8 +2053,7 @@ bool8 ScrCmd_pokemartdecoration(struct ScriptContext *ctx)
 {
     const void *ptr = (void *)ScriptReadWord(ctx);
 
-    NewShop_CreateDecorationShop1Menu(ptr);
-
+    CreateDecorationShop1Menu(ptr);
     ScriptContext_Stop();
     return TRUE;
 }
@@ -2074,8 +2063,7 @@ bool8 ScrCmd_pokemartdecoration2(struct ScriptContext *ctx)
 {
     const void *ptr = (void *)ScriptReadWord(ctx);
 
-    NewShop_CreateDecorationShop2Menu(ptr);
-
+    CreateDecorationShop2Menu(ptr);
     ScriptContext_Stop();
     return TRUE;
 }
