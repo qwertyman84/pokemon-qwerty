@@ -106,11 +106,8 @@ static bool8 StartMenuSafariZoneRetireCallback(void);
 static bool8 StartMenuLinkModePlayerNameCallback(void);
 static bool8 StartMenuBattlePyramidRetireCallback(void);
 static bool8 StartMenuBattlePyramidBagCallback(void);
-<<<<<<< HEAD
 static bool8 StartMenuDebugCallback(void);
-=======
 static bool8 StartMenuUiMenuCallback(void);
->>>>>>> e79c3166c4f10bffb865f0c35c61af1cfec6fc69
 
 // Menu callbacks
 static bool8 SaveStartCallback(void);
@@ -187,12 +184,9 @@ static const struct WindowTemplate sWindowTemplate_PyramidPeak = {
     .baseBlock = 0x8
 };
 
-<<<<<<< HEAD
 static const u8 sText_MenuDebug[] = _("DEBUG");
 
-=======
 static const u8 sText_NewMenu[] = _("My Menu");
->>>>>>> e79c3166c4f10bffb865f0c35c61af1cfec6fc69
 static const struct MenuAction sStartMenuItems[] =
 {
     [MENU_ACTION_POKEDEX]         = {gText_MenuPokedex, {.u8_void = StartMenuPokedexCallback}},
