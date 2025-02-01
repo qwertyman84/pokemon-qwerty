@@ -37,6 +37,7 @@
 #include "gba/defines.h"
 #include "config/general.h"
 #include "constants/characters.h"
+#include "string_util.h"
 
 #ifndef NDEBUG
 
@@ -85,6 +86,8 @@ static inline char mini_pchar_decode(char encoded)
         ret = '('; // opening parentheses
     else if (encoded == CHAR_RIGHT_PAREN)
         ret = ')'; // closing parentheses
+    else if (encoded == CHAR_HYPHEN)
+        ret = '-'; // hyphen
     return ret;
 }
 
@@ -132,7 +135,31 @@ static s32 _putsEncoded(char *s, s32 len, void *buf)
         {
             break;
         }
-        *(b->pbuffer ++) = mini_pchar_decode(s[i]);
+        if (s[i] == CHAR_NEWLINE)
+        {
+            *(b->pbuffer ++) = '\\';
+            *(b->pbuffer ++) = 'n';
+        }
+        else if (s[i] == CHAR_PROMPT_SCROLL)
+        {
+            *(b->pbuffer ++) = '\\';
+            *(b->pbuffer ++) = 'l';
+        }
+        else if (s[i] == CHAR_PROMPT_CLEAR)
+        {
+            *(b->pbuffer ++) = '\\';
+            *(b->pbuffer ++) = 'p';
+        }
+        else if (s[i] == CHAR_ELLIPSIS)
+        {
+            *(b->pbuffer ++) = '.';
+            *(b->pbuffer ++) = '.';
+            *(b->pbuffer ++) = '.';
+        }
+        else
+        {
+            *(b->pbuffer ++) = mini_pchar_decode(s[i]);
+        }
     }
     *(b->pbuffer) = 0;
     return b->pbuffer - p0;
@@ -247,7 +274,8 @@ s32 mini_vpprintf(void* buf, const char *fmt, va_list va)
         {
             len = 1;
             len = _putsAscii(&ch, len, buf);
-        } else
+        }
+        else
         {
             char pad_char = ' ';
             s32 pad_to = 0;
@@ -283,7 +311,8 @@ s32 mini_vpprintf(void* buf, const char *fmt, va_list va)
                     if(l)
                     {
                         len = mini_itoa(va_arg(va, u32), 10, 0, (ch=='u'), bf2);
-                    } else
+                    }
+                    else
                     {
                         if(ch == 'u')
                         {
@@ -325,7 +354,8 @@ s32 mini_vpprintf(void* buf, const char *fmt, va_list va)
                     {
                         len = mini_pad(ptr, len, pad_char, pad_to, bf);
                         len = _putsAscii(bf, len, buf);
-                    } else
+                    }
+                    else
                     {
                         len = _putsAscii(ptr, len, buf);
                     }
@@ -337,7 +367,8 @@ s32 mini_vpprintf(void* buf, const char *fmt, va_list va)
                     {
                         len = mini_pad(ptr, len, pad_char, pad_to, bf);
                         len = _putsEncoded(bf, len, buf);
-                    } else
+                    }
+                    else
                     {
                         len = _putsEncoded(ptr, len, buf);
                     }
