@@ -31,6 +31,7 @@
 #define BW_SUMMARY_MON_IDLE_ANIMS                   TRUE                // loops the mon animations regularly as an "idle" anim
 #define BW_SUMMARY_MON_SHADOWS                      TRUE                // displays a shadow for the mon sprite
 #define BW_SUMMARY_SHOW_TERA_TYPE                   FALSE               // show tera type icons
+#define BW_SUMMARY_SHOW_CONTEST_MOVES               TRUE                // show the contest moves page
 
 /* Info for users
 
@@ -80,6 +81,7 @@ enum PokemonSummaryScreenMode_BW
     BW_SUMMARY_MODE_NORMAL,
     BW_SUMMARY_MODE_LOCK_MOVES,
     BW_SUMMARY_MODE_BOX,
+    BW_SUMMARY_MODE_BOX_CURSOR, // mon is being moved in PC
     BW_SUMMARY_MODE_SELECT_MOVE,
 };
 
