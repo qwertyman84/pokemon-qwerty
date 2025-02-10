@@ -150,8 +150,11 @@
 	.include "src/trainer_hill.o"
 	.include "src/rayquaza_scene.o"
 <<<<<<< HEAD
+<<<<<<< HEAD
 	.include "src/ui_startmenu_full.o"
 	.include "src/ui_main_menu.o"
+=======
+>>>>>>> parent of 5bc14121bd (Merge branch 'main_menu' of https://github.com/TeamAquasHideout/pokeemerald)
 	.include "src/debug.o"
 	.include "src/battle_controller_player.o"
 	.include "src/pokedex_plus_hgss.o"
